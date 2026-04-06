@@ -88,7 +88,20 @@ QUY TẮC TƯ VẤN:
     const data = await response.json();
     if (data.error) return res.status(500).json({ error: data.error.message });
 
-    const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Xin lỗi, em chưa thể trả lời lúc này. Anh/Chị vui lòng gọi 0979.84.0979 để được tư vấn trực tiếp ạ!';
+    let reply = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Xin lỗi, em chưa thể trả lời lúc này. Anh/Chị vui lòng gọi 0979.84.0979 để được tư vấn trực tiếp ạ!';
+    
+    // Strip Gemma 4 chain-of-thought artifacts
+    // Remove everything after "* Check" or "* Ready" or similar reasoning markers
+    reply = reply.replace(/\n?\*\s*(Check|Ready|Draft|Refin|Constraint|Rule|Analyz|Think|Reason|Let me|Hmm|Ok,|Okay)[\s\S]*/gi, '').trim();
+    // Remove content between <think> tags if present
+    reply = reply.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+    // Remove lines starting with "- " followed by checklist-like content (Done, Check, etc.)
+    reply = reply.replace(/\n-\s*(Ask|Suggest|Origin|Zalo|Tone|Length|Language|Check).*$/gm, '').trim();
+    // Clean up any trailing quotes or artifacts
+    reply = reply.replace(/"\s*$/, '').replace(/^\s*"/, '').trim();
+    
+    if (!reply) reply = 'Anh/Chị vui lòng liên hệ Zalo 0979.84.0979 để được tư vấn trực tiếp ạ!';
+    
     return res.status(200).json({ reply });
   } catch (error) {
     return res.status(500).json({ error: 'Lỗi kết nối. Vui lòng thử lại sau!' });
