@@ -8,8 +8,8 @@ module.exports = async (req, res) => {
 
   // Use GROQ_API_KEY environment variable. 
   // If not found, inform the client to set it up.
-  const apiKey = process.env.OPENROUTER_API_KEY;
-  if (!apiKey) return res.status(500).json({ error: 'Chưa cấu hình OPENROUTER_API_KEY. Quản trị viên vui lòng thêm OPENROUTER_API_KEY trên Vercel.' });
+  const apiKey = process.env.KYMA_API_KEY;
+  if (!apiKey) return res.status(500).json({ error: 'Chưa cấu hình KYMA_API_KEY. Quản trị viên vui lòng thêm KYMA_API_KEY trên Vercel.' });
 
   const { messages } = req.body;
   if (!messages || !Array.isArray(messages)) return res.status(400).json({ error: 'Invalid request' });
@@ -73,16 +73,16 @@ QUY TẮC TƯ VẤN:
   ];
 
   try {
-    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    const response = await fetch('https://kymaapi.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${apiKey}`,
         'HTTP-Referer': 'https://website-drab-seven-82.vercel.app', 
-        'X-Title': 'Yen Sao Chatbot' // ASCII only
+        'X-Title': 'Yen Sao Chatbot' 
       },
       body: JSON.stringify({
-        model: 'meta-llama/llama-3.3-70b-instruct:free',
+        model: 'llama-3.3-70b',
         messages: requestMessages,
         temperature: 0.7,
         max_tokens: 500
@@ -91,7 +91,7 @@ QUY TẮC TƯ VẤN:
 
     const data = await response.json();
     if (data.error) {
-       console.error("OpenRouter Error:", data.error);
+       console.error("KymaAPI Error:", data.error);
        return res.status(500).json({ error: 'Hệ thống đang quá tải. Vui lòng thử lại sau!' });
     }
 
