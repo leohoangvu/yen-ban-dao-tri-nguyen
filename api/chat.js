@@ -8,8 +8,8 @@ module.exports = async (req, res) => {
 
   // Use GROQ_API_KEY environment variable. 
   // If not found, inform the client to set it up.
-  const apiKey = process.env.GROQ_API_KEY;
-  if (!apiKey) return res.status(500).json({ error: 'Chưa cấu hình GROQ_API_KEY. Quản trị viên vui lòng thêm GROQ_API_KEY trên Vercel.' });
+  const apiKey = process.env.OPENROUTER_API_KEY;
+  if (!apiKey) return res.status(500).json({ error: 'Chưa cấu hình OPENROUTER_API_KEY. Quản trị viên vui lòng thêm OPENROUTER_API_KEY trên Vercel.' });
 
   const { messages } = req.body;
   if (!messages || !Array.isArray(messages)) return res.status(400).json({ error: 'Invalid request' });
@@ -64,7 +64,7 @@ QUY TẮC TƯ VẤN:
 8. Luôn trả lời bằng tiếng Việt
 9. Nếu khách hỏi ngoài lĩnh vực yến sào → nhẹ nhàng quay về chủ đề`;
 
-  const groqMessages = [
+  const requestMessages = [
     { role: 'system', content: systemPrompt },
     ...messages.map(msg => ({
       role: msg.role === 'user' ? 'user' : 'assistant',
@@ -73,15 +73,17 @@ QUY TẮC TƯ VẤN:
   ];
 
   try {
-    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
+        'Authorization': `Bearer ${apiKey}`,
+        'HTTP-Referer': 'https://website-drab-seven-82.vercel.app', // Optional, for including your app on openrouter.ai rankings.
+        'X-Title': 'Yến Sào Chatbot' // Optional
       },
       body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
-        messages: groqMessages,
+        model: 'meta-llama/llama-3.3-70b-instruct',
+        messages: requestMessages,
         temperature: 0.7,
         max_tokens: 500
       })
