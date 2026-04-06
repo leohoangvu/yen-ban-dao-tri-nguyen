@@ -78,11 +78,11 @@ QUY TẮC TƯ VẤN:
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${apiKey}`,
-        'HTTP-Referer': 'https://website-drab-seven-82.vercel.app', // Optional, for including your app on openrouter.ai rankings.
-        'X-Title': 'Yến Sào Chatbot' // Optional
+        'HTTP-Referer': 'https://website-drab-seven-82.vercel.app', 
+        'X-Title': 'Yen Sao Chatbot' // ASCII only
       },
       body: JSON.stringify({
-        model: 'meta-llama/llama-3.3-70b-instruct',
+        model: 'meta-llama/llama-3.3-70b-instruct:free',
         messages: requestMessages,
         temperature: 0.7,
         max_tokens: 500
@@ -90,11 +90,14 @@ QUY TẮC TƯ VẤN:
     });
 
     const data = await response.json();
-    if (data.error) return res.status(500).json({ error: data.error.message });
+    if (data.error) {
+       console.error("OpenRouter Error:", data.error);
+       return res.status(500).json({ error: 'Hệ thống đang quá tải. Vui lòng thử lại sau!' });
+    }
 
     const reply = data.choices?.[0]?.message?.content || 'Xin lỗi, em chưa thể trả lời lúc này. Anh/Chị vui lòng gọi 0979.84.0979 để được tư vấn trực tiếp ạ!';
     return res.status(200).json({ reply });
   } catch (error) {
-    return res.status(500).json({ error: 'Lỗi kết nối. Vui lòng thử lại sau!' });
+    return res.status(500).json({ error: 'Lỗi kết nối: ' + error.message });
   }
 };
