@@ -92,26 +92,37 @@ CỰC KỲ QUAN TRỌNG: CHỈ trả lời nội dung chat trực tiếp cho kh�
 
     let reply = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Xin lỗi, em chưa thể trả lời lúc này. Anh/Chị vui lòng gọi 0979.84.0979 để được tư vấn trực tiếp ạ!';
     
-    // Strip Gemma 4 chain-of-thought artifacts
-    // Remove <think>...</think> blocks
-    reply = reply.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
-    // Remove everything from reasoning markers to end
-    reply = reply.replace(/\n?\*\s*(Check|Ready|Draft|Refin|Constraint|Rule|Analyz|Think|Reason)[\s\S]*/gi, '').trim();
-    // Remove English reasoning lines (Gemma 4 tends to output english analysis)
+    // Strip Gemma 4 chain-of-thought artifacts aggressively
+    // 1. Remove <think>...</think> blocks
+    reply = reply.replace(/<think>[\s\S]*?<\/think>/gi, '');
+    
+    // 2. Split into lines and filter aggressively
     const lines = reply.split('\n');
-    const cleanLines = lines.filter(line => {
+    const cleanLines = [];
+    let foundVietnamese = false;
+    
+    for (const line of lines) {
       const l = line.trim();
-      // Skip empty lines at start
-      if (!l) return true;
-      // Skip lines that look like internal reasoning
-      if (/^(\d+\.|\*|-)\s*(Ask|Suggest|Origin|Zalo|Tone|Length|Language|Check|Done|Rule|Budget|Need|Want|Draft|Refin|Acknowledg|Hoa Nguy|The user|The customer|I need|I should|Let me|My response|Response|Okay|Hmm)/i.test(l)) return false;
-      // Skip lines that are mostly English analysis
-      if (/^[A-Z][a-z].*\b(want|need|suggest|check|done|constraint|recommend|analysis|thinking|response|draft|plan|goal)\b/i.test(l)) return false;
-      return true;
-    });
+      if (!l) { if (foundVietnamese) cleanLines.push(''); continue; }
+      
+      // Skip lines starting with * (reasoning bullets)
+      if (l.startsWith('*')) continue;
+      // Skip lines that are English-dominant (more ASCII than Vietnamese chars)
+      const vietChars = (l.match(/[\u00C0-\u024F\u1E00-\u1EFF\u0300-\u036F]/g) || []).length;
+      const enWords = (l.match(/\b(user|ask|check|done|draft|rule|constraint|persona|knowledge|response|thinking|plan|suggest|budget|target|analysis|need|want|goal|acknowledge|consultant|premium|bird|nest|type|price|texture|refin|ready|okay|hmm)\b/gi) || []).length;
+      if (enWords >= 2 && vietChars < 3) continue;
+      // Skip numbered analysis lines (1. User asks, 2. Persona, etc)
+      if (/^\d+\.\s*[A-Z]/.test(l) && vietChars < 2) continue;
+      // Skip "- Analysis:" style lines
+      if (/^-\s*[A-Z]/.test(l) && enWords >= 1 && vietChars < 2) continue;
+      
+      foundVietnamese = true;
+      cleanLines.push(line);
+    }
+    
     reply = cleanLines.join('\n').trim();
-    // Clean up quotes
-    reply = reply.replace(/^"/, '').replace(/"$/, '').trim();
+    // Remove surrounding quotes
+    reply = reply.replace(/^["']|["']$/g, '').trim();
     
     if (!reply) reply = 'Anh/Chị vui lòng liên hệ Zalo 0979.84.0979 để được tư vấn trực tiếp ạ!';
     
