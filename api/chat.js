@@ -62,10 +62,15 @@ QUY TẮC TƯ VẤN:
 8. Luôn trả lời bằng tiếng Việt
 9. Nếu khách hỏi ngoài lĩnh vực yến sào → nhẹ nhàng quay về chủ đề`;
 
-  const contents = messages.map(msg => ({
-    role: msg.role === 'user' ? 'user' : 'model',
-    parts: [{ text: msg.content }]
-  }));
+  // Gemma models don't support systemInstruction, so prepend as first turn
+  const contents = [
+    { role: 'user', parts: [{ text: systemPrompt + '\n\nHãy bắt đầu vai trò tư vấn viên.' }] },
+    { role: 'model', parts: [{ text: 'Vâng, em đã sẵn sàng tư vấn với vai trò Hoa Nguyễn — chuyên viên tư vấn yến sào Đại Lý Hoa Nguyễn. Anh/Chị cần em hỗ trợ gì ạ?' }] },
+    ...messages.map(msg => ({
+      role: msg.role === 'user' ? 'user' : 'model',
+      parts: [{ text: msg.content }]
+    }))
+  ];
 
   try {
     const response = await fetch(
@@ -75,7 +80,6 @@ QUY TẮC TƯ VẤN:
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents,
-          systemInstruction: { parts: [{ text: systemPrompt }] },
           generationConfig: { temperature: 0.7, maxOutputTokens: 400 }
         })
       }
