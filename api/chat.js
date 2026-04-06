@@ -60,29 +60,23 @@ QUY TẮC TƯ VẤN:
 6. Giọng: thân thiện, chuyên nghiệp, tạo tin cậy, không ép sales
 7. Trả lời ngắn gọn 2-4 câu mỗi lượt, dùng emoji phù hợp
 8. Luôn trả lời bằng tiếng Việt
-9. Nếu khách hỏi ngoài lĩnh vực yến sào → nhẹ nhàng quay về chủ đề
+9. Nếu khách hỏi ngoài lĩnh vực yến sào → nhẹ nhàng quay về chủ đề`;
 
-CỰC KỲ QUAN TRỌNG: LUÔN đặt câu trả lời của bạn giữa thẻ <reply> và </reply>. VÍ DỤ: <reply>Chào Anh/Chị! Em có thể giúp gì ạ?</reply>. Chỉ nội dung bên trong thẻ <reply> mới được hiển thị cho khách hàng. Bên ngoài thẻ reply bạn có thể suy nghĩ tự do.`;
-
-  // Gemma models don't support systemInstruction, so prepend as first turn
-  const contents = [
-    { role: 'user', parts: [{ text: systemPrompt + '\n\nHãy bắt đầu vai trò tư vấn viên. Nhớ luôn đặt câu trả lời trong thẻ <reply></reply>.' }] },
-    { role: 'model', parts: [{ text: '<reply>Vâng, em đã sẵn sàng tư vấn với vai trò Hoa Nguyễn — chuyên viên tư vấn yến sào Đại Lý Hoa Nguyễn. Anh/Chị cần em hỗ trợ gì ạ?</reply>' }] },
-    ...messages.map(msg => ({
-      role: msg.role === 'user' ? 'user' : 'model',
-      parts: [{ text: msg.content }]
-    }))
-  ];
+  const contents = messages.map(msg => ({
+    role: msg.role === 'user' ? 'user' : 'model',
+    parts: [{ text: msg.content }]
+  }));
 
   try {
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemma-4-31b-it:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents,
-          generationConfig: { temperature: 0.7, maxOutputTokens: 1500 }
+          systemInstruction: { parts: [{ text: systemPrompt }] },
+          generationConfig: { temperature: 0.7, maxOutputTokens: 500 }
         })
       }
     );
@@ -90,30 +84,8 @@ CỰC KỲ QUAN TRỌNG: LUÔN đặt câu trả lời của bạn giữa thẻ 
     const data = await response.json();
     if (data.error) return res.status(500).json({ error: data.error.message });
 
-    let reply = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Xin lỗi, em chưa thể trả lời lúc này. Anh/Chị vui lòng gọi 0979.84.0979 để được tư vấn trực tiếp ạ!';
-    
-    // Extract content from <reply> tags (Gemma 4 reliable extraction)
-    const replyMatch = reply.match(/<reply>([\s\S]*?)<\/reply>/i);
-    if (replyMatch) {
-      reply = replyMatch[1].trim();
-    } else {
-      // Fallback: try to find Vietnamese content
-      reply = reply.replace(/<think>[\s\S]*?<\/think>/gi, '');
-      const lines = reply.split('\n').filter(l => {
-        const t = l.trim();
-        if (!t) return false;
-        if (t.startsWith('*')) return false;
-        const viet = (t.match(/[\u00C0-\u024F\u1E00-\u1EFF]/g) || []).length;
-        return viet >= 2;
-      });
-      reply = lines.join('\n').trim();
-    }
-    // Clean tags if any remain
-    reply = reply.replace(/<\/?reply>/gi, '').trim();
-    
-    if (!reply) reply = 'Anh/Chị vui lòng liên hệ Zalo 0979.84.0979 để được tư vấn trực tiếp ạ!';
-    
-    return res.status(200).json({ reply, _debug_raw: data.candidates?.[0]?.content?.parts?.[0]?.text?.substring(0, 1000) });
+    const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Xin lỗi, em chưa thể trả lời lúc này. Anh/Chị vui lòng gọi 0979.84.0979 để được tư vấn trực tiếp ạ!';
+    return res.status(200).json({ reply });
   } catch (error) {
     return res.status(500).json({ error: 'Lỗi kết nối. Vui lòng thử lại sau!' });
   }
