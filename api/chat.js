@@ -60,7 +60,9 @@ QUY TẮC TƯ VẤN:
 6. Giọng: thân thiện, chuyên nghiệp, tạo tin cậy, không ép sales
 7. Trả lời ngắn gọn 2-4 câu mỗi lượt, dùng emoji phù hợp
 8. Luôn trả lời bằng tiếng Việt
-9. Nếu khách hỏi ngoài lĩnh vực yến sào → nhẹ nhàng quay về chủ đề`;
+9. Nếu khách hỏi ngoài lĩnh vực yến sào → nhẹ nhàng quay về chủ đề
+
+CỰC KỲ QUAN TRỌNG: CHỈ trả lời nội dung chat trực tiếp cho khách hàng. TUYỆT ĐỐI KHÔNG được viết suy nghĩ, phân tích, checklist, draft, reasoning, hoặc bất kỳ ghi chú nội bộ nào. Chỉ output câu trả lời cuối cùng bằng tiếng Việt.`;
 
   // Gemma models don't support systemInstruction, so prepend as first turn
   const contents = [
@@ -91,14 +93,25 @@ QUY TẮC TƯ VẤN:
     let reply = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Xin lỗi, em chưa thể trả lời lúc này. Anh/Chị vui lòng gọi 0979.84.0979 để được tư vấn trực tiếp ạ!';
     
     // Strip Gemma 4 chain-of-thought artifacts
-    // Remove everything after "* Check" or "* Ready" or similar reasoning markers
-    reply = reply.replace(/\n?\*\s*(Check|Ready|Draft|Refin|Constraint|Rule|Analyz|Think|Reason|Let me|Hmm|Ok,|Okay)[\s\S]*/gi, '').trim();
-    // Remove content between <think> tags if present
+    // Remove <think>...</think> blocks
     reply = reply.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
-    // Remove lines starting with "- " followed by checklist-like content (Done, Check, etc.)
-    reply = reply.replace(/\n-\s*(Ask|Suggest|Origin|Zalo|Tone|Length|Language|Check).*$/gm, '').trim();
-    // Clean up any trailing quotes or artifacts
-    reply = reply.replace(/"\s*$/, '').replace(/^\s*"/, '').trim();
+    // Remove everything from reasoning markers to end
+    reply = reply.replace(/\n?\*\s*(Check|Ready|Draft|Refin|Constraint|Rule|Analyz|Think|Reason)[\s\S]*/gi, '').trim();
+    // Remove English reasoning lines (Gemma 4 tends to output english analysis)
+    const lines = reply.split('\n');
+    const cleanLines = lines.filter(line => {
+      const l = line.trim();
+      // Skip empty lines at start
+      if (!l) return true;
+      // Skip lines that look like internal reasoning
+      if (/^(\d+\.|\*|-)\s*(Ask|Suggest|Origin|Zalo|Tone|Length|Language|Check|Done|Rule|Budget|Need|Want|Draft|Refin|Acknowledg|Hoa Nguy|The user|The customer|I need|I should|Let me|My response|Response|Okay|Hmm)/i.test(l)) return false;
+      // Skip lines that are mostly English analysis
+      if (/^[A-Z][a-z].*\b(want|need|suggest|check|done|constraint|recommend|analysis|thinking|response|draft|plan|goal)\b/i.test(l)) return false;
+      return true;
+    });
+    reply = cleanLines.join('\n').trim();
+    // Clean up quotes
+    reply = reply.replace(/^"/, '').replace(/"$/, '').trim();
     
     if (!reply) reply = 'Anh/Chị vui lòng liên hệ Zalo 0979.84.0979 để được tư vấn trực tiếp ạ!';
     
