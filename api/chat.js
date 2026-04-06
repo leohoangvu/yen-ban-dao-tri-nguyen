@@ -62,12 +62,12 @@ QUY TẮC TƯ VẤN:
 8. Luôn trả lời bằng tiếng Việt
 9. Nếu khách hỏi ngoài lĩnh vực yến sào → nhẹ nhàng quay về chủ đề
 
-CỰC KỲ QUAN TRỌNG: CHỈ trả lời nội dung chat trực tiếp cho khách hàng. TUYỆT ĐỐI KHÔNG được viết suy nghĩ, phân tích, checklist, draft, reasoning, hoặc bất kỳ ghi chú nội bộ nào. Chỉ output câu trả lời cuối cùng bằng tiếng Việt.`;
+CỰC KỲ QUAN TRỌNG: LUÔN đặt câu trả lời của bạn giữa thẻ <reply> và </reply>. VÍ DỤ: <reply>Chào Anh/Chị! Em có thể giúp gì ạ?</reply>. Chỉ nội dung bên trong thẻ <reply> mới được hiển thị cho khách hàng. Bên ngoài thẻ reply bạn có thể suy nghĩ tự do.`;
 
   // Gemma models don't support systemInstruction, so prepend as first turn
   const contents = [
-    { role: 'user', parts: [{ text: systemPrompt + '\n\nHãy bắt đầu vai trò tư vấn viên.' }] },
-    { role: 'model', parts: [{ text: 'Vâng, em đã sẵn sàng tư vấn với vai trò Hoa Nguyễn — chuyên viên tư vấn yến sào Đại Lý Hoa Nguyễn. Anh/Chị cần em hỗ trợ gì ạ?' }] },
+    { role: 'user', parts: [{ text: systemPrompt + '\n\nHãy bắt đầu vai trò tư vấn viên. Nhớ luôn đặt câu trả lời trong thẻ <reply></reply>.' }] },
+    { role: 'model', parts: [{ text: '<reply>Vâng, em đã sẵn sàng tư vấn với vai trò Hoa Nguyễn — chuyên viên tư vấn yến sào Đại Lý Hoa Nguyễn. Anh/Chị cần em hỗ trợ gì ạ?</reply>' }] },
     ...messages.map(msg => ({
       role: msg.role === 'user' ? 'user' : 'model',
       parts: [{ text: msg.content }]
@@ -92,37 +92,24 @@ CỰC KỲ QUAN TRỌNG: CHỈ trả lời nội dung chat trực tiếp cho kh�
 
     let reply = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Xin lỗi, em chưa thể trả lời lúc này. Anh/Chị vui lòng gọi 0979.84.0979 để được tư vấn trực tiếp ạ!';
     
-    // Strip Gemma 4 chain-of-thought artifacts aggressively
-    // 1. Remove <think>...</think> blocks
-    reply = reply.replace(/<think>[\s\S]*?<\/think>/gi, '');
-    
-    // 2. Split into lines and filter aggressively
-    const lines = reply.split('\n');
-    const cleanLines = [];
-    let foundVietnamese = false;
-    
-    for (const line of lines) {
-      const l = line.trim();
-      if (!l) { if (foundVietnamese) cleanLines.push(''); continue; }
-      
-      // Skip lines starting with * (reasoning bullets)
-      if (l.startsWith('*')) continue;
-      // Skip lines that are English-dominant (more ASCII than Vietnamese chars)
-      const vietChars = (l.match(/[\u00C0-\u024F\u1E00-\u1EFF\u0300-\u036F]/g) || []).length;
-      const enWords = (l.match(/\b(user|ask|check|done|draft|rule|constraint|persona|knowledge|response|thinking|plan|suggest|budget|target|analysis|need|want|goal|acknowledge|consultant|premium|bird|nest|type|price|texture|refin|ready|okay|hmm)\b/gi) || []).length;
-      if (enWords >= 2 && vietChars < 3) continue;
-      // Skip numbered analysis lines (1. User asks, 2. Persona, etc)
-      if (/^\d+\.\s*[A-Z]/.test(l) && vietChars < 2) continue;
-      // Skip "- Analysis:" style lines
-      if (/^-\s*[A-Z]/.test(l) && enWords >= 1 && vietChars < 2) continue;
-      
-      foundVietnamese = true;
-      cleanLines.push(line);
+    // Extract content from <reply> tags (Gemma 4 reliable extraction)
+    const replyMatch = reply.match(/<reply>([\s\S]*?)<\/reply>/i);
+    if (replyMatch) {
+      reply = replyMatch[1].trim();
+    } else {
+      // Fallback: try to find Vietnamese content
+      reply = reply.replace(/<think>[\s\S]*?<\/think>/gi, '');
+      const lines = reply.split('\n').filter(l => {
+        const t = l.trim();
+        if (!t) return false;
+        if (t.startsWith('*')) return false;
+        const viet = (t.match(/[\u00C0-\u024F\u1E00-\u1EFF]/g) || []).length;
+        return viet >= 2;
+      });
+      reply = lines.join('\n').trim();
     }
-    
-    reply = cleanLines.join('\n').trim();
-    // Remove surrounding quotes
-    reply = reply.replace(/^["']|["']$/g, '').trim();
+    // Clean tags if any remain
+    reply = reply.replace(/<\/?reply>/gi, '').trim();
     
     if (!reply) reply = 'Anh/Chị vui lòng liên hệ Zalo 0979.84.0979 để được tư vấn trực tiếp ạ!';
     
