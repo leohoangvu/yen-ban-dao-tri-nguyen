@@ -193,3 +193,125 @@ function preloadImages(urls) {
 
 // Preload critical images
 preloadImages(imageUrls.slice(0, 5));
+
+// ===== AI CHATBOT =====
+(function() {
+  const widget = document.getElementById('chatbot-widget');
+  const toggle = document.getElementById('chatbot-toggle');
+  const closeBtn = document.getElementById('chatbot-close');
+  const messagesEl = document.getElementById('chatbot-messages');
+  const input = document.getElementById('chatbot-input');
+  const sendBtn = document.getElementById('chatbot-send');
+  const suggestionsEl = document.getElementById('chatbot-suggestions');
+  
+  if (!widget || !toggle) return;
+
+  let chatHistory = [];
+  let isLoading = false;
+
+  // Toggle chat
+  toggle.addEventListener('click', () => {
+    widget.classList.toggle('active');
+    if (widget.classList.contains('active')) {
+      input.focus();
+    }
+  });
+
+  closeBtn.addEventListener('click', () => {
+    widget.classList.remove('active');
+  });
+
+  // Suggestion buttons
+  suggestionsEl.querySelectorAll('.suggestion-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const msg = btn.dataset.msg;
+      if (msg) sendMessage(msg);
+    });
+  });
+
+  // Send on Enter
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      const msg = input.value.trim();
+      if (msg) sendMessage(msg);
+    }
+  });
+
+  // Send button click
+  sendBtn.addEventListener('click', () => {
+    const msg = input.value.trim();
+    if (msg) sendMessage(msg);
+  });
+
+  function sendMessage(text) {
+    if (isLoading) return;
+
+    // Hide suggestions after first message
+    suggestionsEl.classList.add('hidden');
+
+    // Add user message
+    addMessage('user', text);
+    chatHistory.push({ role: 'user', content: text });
+    input.value = '';
+    input.focus();
+
+    // Show typing indicator
+    isLoading = true;
+    sendBtn.disabled = true;
+    const typingEl = showTyping();
+
+    // Call API
+    fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messages: chatHistory })
+    })
+    .then(res => res.json())
+    .then(data => {
+      removeTyping(typingEl);
+      if (data.reply) {
+        addMessage('bot', data.reply);
+        chatHistory.push({ role: 'assistant', content: data.reply });
+      } else if (data.error) {
+        addMessage('bot', '⚠️ ' + data.error);
+      }
+    })
+    .catch(err => {
+      removeTyping(typingEl);
+      addMessage('bot', 'Xin lỗi, đang có lỗi kết nối. Anh/Chị vui lòng gọi Zalo 0979.84.0979 để được tư vấn trực tiếp ạ! 🙏');
+    })
+    .finally(() => {
+      isLoading = false;
+      sendBtn.disabled = false;
+    });
+  }
+
+  function addMessage(role, text) {
+    const div = document.createElement('div');
+    div.className = `chat-message ${role}`;
+    
+    // Format text: bold, line breaks
+    const formatted = text
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\n/g, '<br>');
+    
+    div.innerHTML = `<div class="chat-bubble">${formatted}</div>`;
+    messagesEl.appendChild(div);
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+  }
+
+  function showTyping() {
+    const div = document.createElement('div');
+    div.className = 'chat-message bot';
+    div.id = 'typing-msg';
+    div.innerHTML = `<div class="chat-bubble"><div class="typing-indicator"><span></span><span></span><span></span></div></div>`;
+    messagesEl.appendChild(div);
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+    return div;
+  }
+
+  function removeTyping(el) {
+    if (el && el.parentNode) el.parentNode.removeChild(el);
+  }
+})();
