@@ -113,7 +113,7 @@ CỰC KỲ QUAN TRỌNG: LUÔN đặt câu trả lời của bạn giữa thẻ 
     
     if (!reply) reply = 'Anh/Chị vui lòng liên hệ Zalo 0979.84.0979 để được tư vấn trực tiếp ạ!';
     
-    return res.status(200).json({ reply });
+    return res.status(200).json({ reply, _debug_raw: data.candidates?.[0]?.content?.parts?.[0]?.text?.substring(0, 1000) });
   } catch (error) {
     return res.status(500).json({ error: 'Lỗi kết nối. Vui lòng thử lại sau!' });
   }
