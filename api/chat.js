@@ -82,7 +82,7 @@ CỰC KỲ QUAN TRỌNG: LUÔN đặt câu trả lời của bạn giữa thẻ 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents,
-          generationConfig: { temperature: 0.7, maxOutputTokens: 400 }
+          generationConfig: { temperature: 0.7, maxOutputTokens: 1500 }
         })
       }
     );
