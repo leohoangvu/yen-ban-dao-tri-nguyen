@@ -90,7 +90,10 @@ QUY TẮC TƯ VẤN:
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
+        'Authorization': `Bearer ${apiKey}`,
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'HTTP-Referer': 'https://website-drab-seven-82.vercel.app',
+        'X-Title': 'Yen Sao Chatbot'
       },
       body: JSON.stringify({
         model: 'llama-3.3-70b-versatile',
