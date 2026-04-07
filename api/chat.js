@@ -6,10 +6,8 @@ module.exports = async (req, res) => {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  // Use GROQ_API_KEY environment variable. 
-  // If not found, inform the client to set it up.
-  const apiKey = process.env.KYMA_API_KEY;
-  if (!apiKey) return res.status(500).json({ error: 'Chưa cấu hình KYMA_API_KEY. Quản trị viên vui lòng thêm KYMA_API_KEY trên Vercel.' });
+  const apiKey = process.env.GROQ_API_KEY;
+  if (!apiKey) return res.status(500).json({ error: 'Chưa cấu hình GROQ_API_KEY. Quản trị viên vui lòng thêm GROQ_API_KEY trên Vercel.' });
 
   const { messages } = req.body;
   if (!messages || !Array.isArray(messages)) return res.status(400).json({ error: 'Invalid request' });
@@ -85,16 +83,14 @@ QUY TẮC TƯ VẤN:
   const logUserPromise = lastUserMsg ? logToSheet('user', lastUserMsg) : Promise.resolve();
 
   try {
-    const response = await fetch('https://kymaapi.com/v1/chat/completions', {
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-        'HTTP-Referer': 'https://website-drab-seven-82.vercel.app', 
-        'X-Title': 'Yen Sao Chatbot' 
+        'Authorization': `Bearer ${apiKey}`
       },
       body: JSON.stringify({
-        model: 'llama-3.3-70b',
+        model: 'llama-3.3-70b-versatile',
         messages: requestMessages,
         temperature: 0.7,
         max_tokens: 500
@@ -106,12 +102,12 @@ QUY TẮC TƯ VẤN:
     try {
       data = JSON.parse(textResponse);
     } catch (parseError) {
-      console.error("KymaAPI Non-JSON Response:", textResponse);
+      console.error("GroqAPI Non-JSON Response:", textResponse);
       return res.status(500).json({ error: 'Hệ thống đang quá tải. Anh/Chị vui lòng thử lại sau ít phút ạ!' });
     }
 
     if (!response.ok || data.error) {
-       console.error("KymaAPI Error:", data.error || textResponse);
+       console.error("GroqAPI Error:", data.error || textResponse);
        return res.status(500).json({ error: 'Hệ thống đang quá tải. Anh/Chị vui lòng thử lại sau ít phút ạ!' });
     }
 
