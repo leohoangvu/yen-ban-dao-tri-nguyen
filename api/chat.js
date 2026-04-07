@@ -116,10 +116,11 @@ QUY TẮC TƯ VẤN:
 
     const reply = data.choices?.[0]?.message?.content || 'Xin lỗi, em chưa thể trả lời lúc này. Anh/Chị vui lòng gọi 0979.84.0979 để được tư vấn trực tiếp ạ!';
     
-    // Log bot message and wait for all logs to complete before ending function (so Vercel doesn't kill it)
-    await Promise.allSettled([logUserPromise, logToSheet('model', reply)]);
+    // Return early so Vercel doesn't hit 10s timeout
+    res.status(200).json({ reply });
 
-    return res.status(200).json({ reply });
+    // Try logging in background (Vercel might freeze execution, but at least user gets response)
+    Promise.allSettled([logUserPromise, logToSheet('model', reply)]).catch(() => {});
   } catch (error) {
     return res.status(500).json({ error: 'Lỗi kết nối: ' + error.message });
   }
