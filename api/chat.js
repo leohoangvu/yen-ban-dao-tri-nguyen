@@ -101,10 +101,18 @@ QUY TẮC TƯ VẤN:
       })
     });
 
-    const data = await response.json();
-    if (data.error) {
-       console.error("KymaAPI Error:", data.error);
-       return res.status(500).json({ error: 'Hệ thống đang quá tải. Vui lòng thử lại sau!' });
+    const textResponse = await response.text();
+    let data;
+    try {
+      data = JSON.parse(textResponse);
+    } catch (parseError) {
+      console.error("KymaAPI Non-JSON Response:", textResponse);
+      return res.status(500).json({ error: 'Hệ thống đang quá tải. Anh/Chị vui lòng thử lại sau ít phút ạ!' });
+    }
+
+    if (!response.ok || data.error) {
+       console.error("KymaAPI Error:", data.error || textResponse);
+       return res.status(500).json({ error: 'Hệ thống đang quá tải. Anh/Chị vui lòng thử lại sau ít phút ạ!' });
     }
 
     const reply = data.choices?.[0]?.message?.content || 'Xin lỗi, em chưa thể trả lời lúc này. Anh/Chị vui lòng gọi 0979.84.0979 để được tư vấn trực tiếp ạ!';
